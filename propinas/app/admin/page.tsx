@@ -3,12 +3,8 @@
 export const dynamic = "force-dynamic";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
-import { LogOut } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { ImageDropzone } from "@/components/admin/image-dropzone";
 import { ImageGallery } from "@/components/admin/image-gallery";
 import { BackgroundPickerButton } from "@/components/admin/background-picker-button";
@@ -22,7 +18,7 @@ import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
 import { useSiteSettings } from "@/hooks/use-site-settings";
 import { DEFAULT_SITE_STYLE, type SiteStyle } from "@/lib/site-style";
 import type { StorageImage, UploadPayload } from "@/hooks/use-supabase-storage";
-import { isAdminUnlocked, lockAdmin } from "@/lib/admin-auth";
+import { isAdminUnlocked } from "@/lib/admin-auth";
 
 export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -126,19 +122,6 @@ export default function AdminPage() {
               setPendingBackgroundUrl(URL.createObjectURL(file));
             }}
           />
-          <Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
-            Home
-          </Link>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              lockAdmin();
-              setUnlocked(false);
-            }}
-          >
-            <LogOut className="size-4" />
-            Salir
-          </Button>
         </div>
       </div>
 
