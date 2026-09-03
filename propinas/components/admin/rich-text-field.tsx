@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Bold, Italic, Underline, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SITE_FONTS, type SiteFontId } from "@/lib/site-fonts";
 import { cn } from "@/lib/utils";
 
 const EMOJIS = [
@@ -20,6 +21,10 @@ interface RichTextFieldProps {
   disabled?: boolean;
   multiline?: boolean;
   rows?: number;
+  color?: string;
+  onColorChange?: (color: string) => void;
+  font?: SiteFontId;
+  onFontChange?: (font: SiteFontId) => void;
 }
 
 function wrapSelection(
@@ -70,6 +75,10 @@ export function RichTextField({
   disabled,
   multiline = false,
   rows = 4,
+  color,
+  onColorChange,
+  font,
+  onFontChange,
 }: RichTextFieldProps) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -131,6 +140,39 @@ export function RichTextField({
         >
           <Smile />
         </Button>
+        {onColorChange ? (
+          <label
+            className="relative inline-flex size-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[#dadce0] bg-white"
+            title="Color del texto"
+          >
+            <span
+              className="size-4 rounded-full border border-black/10"
+              style={{ backgroundColor: color || "#171717" }}
+            />
+            <input
+              type="color"
+              value={/^#[0-9A-Fa-f]{6}$/.test(color ?? "") ? color! : "#171717"}
+              disabled={disabled}
+              onChange={(e) => onColorChange(e.target.value)}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
+        ) : null}
+        {onFontChange ? (
+          <select
+            value={font || "sans"}
+            disabled={disabled}
+            title="Fuente"
+            onChange={(e) => onFontChange(e.target.value as SiteFontId)}
+            className="h-7 rounded-full border border-[#dadce0] bg-white px-2 text-xs dark:border-white/20 dark:bg-transparent"
+          >
+            {SITE_FONTS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
 
       {showEmojis && (

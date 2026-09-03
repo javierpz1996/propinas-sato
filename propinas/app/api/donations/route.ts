@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Preference } from "mercadopago";
+import { Preference } from "mercadopago";
+import { getMercadoPagoClient } from "@/lib/mercadopago-client";
+import { getPublicBaseUrl, isLocalUrl } from "@/lib/mp-site-url";
 
 export async function POST(request: Request) {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-
-  if (!accessToken) {
-    return NextResponse.json(
-      {
-        error:
-          "Falta MERCADOPAGO_ACCESS_TOKEN. Agregala en .env.local y reiniciá el servidor.",
-      },
-      { status: 500 },
-    );
-  }
-
   let body: { amount?: number; imageId?: string };
   try {
     body = await request.json();
@@ -26,41 +16,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Monto no permitido" }, { status: 400 });
   }
 
-  const origin = new URL(request.url).origin;
-  const returnPath = body.imageId
-    ? `${origin}/detalle/${body.imageId}`
-    : origin;
-  const isLocal =
-    origin.includes("localhost") || origin.includes("127.0.0.1");
+  const imageId = body.imageId?.trim() || "";
+  const base = getPublicBaseUrl(request);
+  const successUrl = `${base}/gracias?monto=${amount}${
+    imageId ? `&imageId=${encodeURIComponent(imageId)}` : ""
+  }`;
+  const failPath = imageId ? `${base}/detalle/${imageId}` : base;
 
-  const client = new MercadoPagoConfig({ accessToken });
+  let client;
+  try {
+    client = getMercadoPagoClient();
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Falta MERCADOPAGO_ACCESS_TOKEN";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
   const preference = new Preference(client);
+  const notificationUrl = isLocalUrl(base)
+    ? undefined
+    : `${base}/api/webhooks/mercadopago`;
+
+  const preferenceBody = {
+    items: [
+      {
+        id: `donacion-${amount}`,
+        title: `Donación $${amount}`,
+        quantity: 1,
+        unit_price: amount,
+        currency_id: "ARS",
+      },
+    ],
+    statement_descriptor: "DONACION",
+    metadata: {
+      image_id: imageId || undefined,
+      amount: String(amount),
+    },
+    external_reference: imageId ? `${imageId}:${amount}` : String(amount),
+    back_urls: {
+      success: successUrl,
+      failure: `${failPath}?donacion=error`,
+      pending: `${failPath}?donacion=pending`,
+    },
+    auto_return: "approved" as const,
+    ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+  };
 
   try {
-    const result = await preference.create({
-      body: {
-        items: [
-          {
-            id: `donacion-${amount}`,
-            title: `Donación $${amount}`,
-            quantity: 1,
-            unit_price: amount,
-            currency_id: "ARS",
-          },
-        ],
-        statement_descriptor: "DONACION",
-        ...(isLocal
-          ? {}
-          : {
-              back_urls: {
-                success: `${returnPath}?donacion=ok`,
-                failure: `${returnPath}?donacion=error`,
-                pending: `${returnPath}?donacion=pending`,
-              },
-              auto_return: "approved" as const,
-            }),
-      },
-    });
+    let result;
+    try {
+      result = await preference.create({ body: preferenceBody });
+    } catch (firstErr) {
+      if (!isLocalUrl(base)) throw firstErr;
+      const { back_urls, auto_return, ...withoutReturn } = preferenceBody;
+      void back_urls;
+      void auto_return;
+      result = await preference.create({ body: withoutReturn });
+    }
 
     const checkoutUrl = result.init_point ?? result.sandbox_init_point;
     if (!checkoutUrl) {

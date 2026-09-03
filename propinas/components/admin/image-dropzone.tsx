@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { UploadPayload } from "@/hooks/use-supabase-storage";
 import { RichTextField } from "@/components/admin/rich-text-field";
-import { ImagePreview } from "@/components/image-preview";
+import type { SiteFontId } from "@/lib/site-fonts";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_SIZE_MB = 5;
@@ -24,12 +24,43 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+export interface ImageDraft {
+  previewUrl: string | null;
+  title: string;
+  description: string;
+}
+
 interface ImageDropzoneProps {
   onUpload: (payload: UploadPayload) => Promise<void>;
   uploading: boolean;
+  onDraftChange?: (draft: ImageDraft) => void;
+  titleColor?: string;
+  descriptionColor?: string;
+  titleFont?: SiteFontId;
+  descriptionFont?: SiteFontId;
+  onTitleColorChange?: (color: string) => void;
+  onDescriptionColorChange?: (color: string) => void;
+  onTitleFontChange?: (font: SiteFontId) => void;
+  onDescriptionFontChange?: (font: SiteFontId) => void;
+  savingStyle?: boolean;
+  onSaveStyle?: () => Promise<void>;
 }
 
-export function ImageDropzone({ onUpload, uploading }: ImageDropzoneProps) {
+export function ImageDropzone({
+  onUpload,
+  uploading,
+  onDraftChange,
+  titleColor,
+  descriptionColor,
+  titleFont,
+  descriptionFont,
+  onTitleColorChange,
+  onDescriptionColorChange,
+  onTitleFontChange,
+  onDescriptionFontChange,
+  savingStyle,
+  onSaveStyle,
+}: ImageDropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -53,8 +84,12 @@ export function ImageDropzone({ onUpload, uploading }: ImageDropzoneProps) {
 
     setFile(f);
     const url = URL.createObjectURL(f);
-    setPreview(url);
-  }, []);
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return url;
+    });
+    onDraftChange?.({ previewUrl: url, title, description });
+  }, [title, description, onDraftChange]);
 
   const handleDrop = useCallback(
     (e: DragEvent<HTMLDivElement>) => {
@@ -82,7 +117,8 @@ export function ImageDropzone({ onUpload, uploading }: ImageDropzoneProps) {
     setDescription("");
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
-  }, [preview]);
+    onDraftChange?.({ previewUrl: null, title: "", description: "" });
+  }, [preview, onDraftChange]);
 
   const handleUpload = useCallback(async () => {
     if (!file) return;
@@ -147,6 +183,66 @@ export function ImageDropzone({ onUpload, uploading }: ImageDropzoneProps) {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
+        <RichTextField
+          id="image-title"
+          label="Título"
+          value={title}
+          onChange={(value) => {
+            setTitle(value);
+            onDraftChange?.({
+              previewUrl: preview,
+              title: value,
+              description,
+            });
+          }}
+          placeholder="Título que se verá arriba de la foto"
+          disabled={uploading}
+          color={titleColor}
+          onColorChange={onTitleColorChange}
+          font={titleFont}
+          onFontChange={onTitleFontChange}
+        />
+
+        <RichTextField
+          id="image-description"
+          label="Descripción"
+          value={description}
+          onChange={(value) => {
+            setDescription(value);
+            onDraftChange?.({
+              previewUrl: preview,
+              title,
+              description: value,
+            });
+          }}
+          placeholder="Texto que se verá debajo de la foto"
+          disabled={uploading}
+          multiline
+          rows={4}
+          color={descriptionColor}
+          onColorChange={onDescriptionColorChange}
+          font={descriptionFont}
+          onFontChange={onDescriptionFontChange}
+        />
+
+        {onSaveStyle ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onSaveStyle}
+            disabled={savingStyle || uploading}
+          >
+            {savingStyle ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Guardando…
+              </>
+            ) : (
+              "Guardar colores y fuentes del post"
+            )}
+          </Button>
+        ) : null}
+
         {file && preview && (
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
@@ -162,39 +258,6 @@ export function ImageDropzone({ onUpload, uploading }: ImageDropzoneProps) {
               >
                 <Trash2 className="size-4" />
               </Button>
-            </div>
-
-            <RichTextField
-              id="image-title"
-              label="Título"
-              value={title}
-              onChange={setTitle}
-              placeholder="Título que se verá arriba de la foto"
-              disabled={uploading}
-            />
-
-            <RichTextField
-              id="image-description"
-              label="Descripción"
-              value={description}
-              onChange={setDescription}
-              placeholder="Texto que se verá debajo de la foto"
-              disabled={uploading}
-              multiline
-              rows={4}
-            />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Vista previa</p>
-              <div className="rounded-xl border bg-background p-4">
-                <ImagePreview
-                  imageSrc={preview}
-                  title={title}
-                  description={description}
-                  compact
-                  showPlaceholders
-                />
-              </div>
             </div>
 
             <div className="flex gap-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormattedText } from "@/components/formatted-text";
+import { fontFamilyCss, type SiteFontId } from "@/lib/site-fonts";
 
 interface ImagePreviewProps {
   imageSrc: string;
@@ -8,6 +9,10 @@ interface ImagePreviewProps {
   description: string;
   compact?: boolean;
   showPlaceholders?: boolean;
+  titleColor?: string;
+  descriptionColor?: string;
+  titleFont?: SiteFontId;
+  descriptionFont?: SiteFontId;
 }
 
 export function ImagePreview({
@@ -16,13 +21,21 @@ export function ImagePreview({
   description,
   compact = false,
   showPlaceholders = false,
+  titleColor,
+  descriptionColor,
+  titleFont,
+  descriptionFont,
 }: ImagePreviewProps) {
   return (
-    <article className="space-y-4">
+    <article
+      className={compact ? "mx-auto w-full max-w-md space-y-4" : "space-y-4"}
+    >
       {title ? (
         <FormattedText
           as="h1"
           text={title}
+          color={titleColor}
+          fontFamily={fontFamilyCss(titleFont)}
           className={
             compact
               ? "text-center text-xl font-semibold tracking-tight"
@@ -35,23 +48,31 @@ export function ImagePreview({
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border bg-muted/20">
-        <img
-          src={imageSrc}
-          alt={title || "Imagen"}
-          className={
-            compact
-              ? "mx-auto max-h-[240px] w-full object-contain"
-              : "mx-auto max-h-[80vh] w-full object-contain"
-          }
-        />
-      </div>
+      {imageSrc ? (
+        <div className="overflow-hidden">
+          <img
+            src={imageSrc}
+            alt={title || "Imagen"}
+            className={
+              compact
+                ? "mx-auto max-h-[240px] w-full object-contain"
+                : "mx-auto max-h-[80vh] w-full object-contain"
+            }
+          />
+        </div>
+      ) : showPlaceholders ? (
+        <div className="flex h-32 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+          Foto de ejemplo
+        </div>
+      ) : null}
 
       {description ? (
         <FormattedText
           as="p"
           text={description}
-          className="text-center text-muted-foreground"
+          color={descriptionColor}
+          fontFamily={fontFamilyCss(descriptionFont)}
+          className="text-center"
         />
       ) : showPlaceholders ? (
         <p className="text-center text-sm text-muted-foreground">

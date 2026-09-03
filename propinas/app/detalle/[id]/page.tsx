@@ -11,6 +11,8 @@ import { downloadOriginalFile } from "@/lib/download-file";
 import { toast } from "sonner";
 import { ImagePreview } from "@/components/image-preview";
 import { DonationButtons } from "@/components/donation-buttons";
+import { DetailShell } from "@/components/detail-shell";
+import { siteStyleFromRow, DEFAULT_SITE_STYLE, type SiteStyle } from "@/lib/site-style";
 
 interface ImageDetail {
   id: string;
@@ -38,6 +40,8 @@ function DetalleContent() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const [image, setImage] = useState<ImageDetail | null>(null);
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [siteStyle, setSiteStyle] = useState<SiteStyle>(DEFAULT_SITE_STYLE);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -46,11 +50,15 @@ function DetalleContent() {
     async function load() {
       try {
         const sb = getSupabaseClient();
-        const { data, error } = await sb
-          .from("images")
-          .select("*")
-          .eq("id", params.id)
-          .single();
+        const [{ data, error }, settings] = await Promise.all([
+          sb.from("images").select("*").eq("id", params.id).single(),
+          sb.from("site_settings").select("*").eq("id", "main").maybeSingle(),
+        ]);
+
+        if (settings.data?.detail_background_url) {
+          setBackgroundUrl(settings.data.detail_background_url as string);
+        }
+        setSiteStyle(siteStyleFromRow(settings.data as Record<string, unknown> | null));
 
         if (error || !data) {
           setNotFound(true);
@@ -74,9 +82,7 @@ function DetalleContent() {
 
   useEffect(() => {
     const status = searchParams.get("donacion");
-    if (status === "ok") {
-      toast.success("¡Gracias por tu donación!");
-    } else if (status === "pending") {
+    if (status === "pending") {
       toast("Tu donación quedó pendiente");
     } else if (status === "error") {
       toast.error("La donación no se completó");
@@ -116,6 +122,7 @@ function DetalleContent() {
   }
 
   return (
+    <DetailShell backgroundUrl={backgroundUrl}>
     <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
       <Link
         href="/"
@@ -130,6 +137,10 @@ function DetalleContent() {
           imageSrc={image.url}
           title={image.title}
           description={image.description}
+          titleColor={siteStyle.titleColor}
+          descriptionColor={siteStyle.descriptionColor}
+          titleFont={siteStyle.titleFont}
+          descriptionFont={siteStyle.descriptionFont}
         />
 
         <div className="flex flex-col items-center gap-6">
@@ -146,9 +157,16 @@ function DetalleContent() {
               </>
             )}
           </Button>
-          <DonationButtons imageId={image.id} />
+          <DonationButtons
+            imageId={image.id}
+            message={siteStyle.donationMessage}
+            color={siteStyle.donationColor}
+            messageColor={siteStyle.donationMessageColor}
+            messageFont={siteStyle.donationMessageFont}
+          />
         </div>
       </article>
     </div>
+    </DetailShell>
   );
 }
