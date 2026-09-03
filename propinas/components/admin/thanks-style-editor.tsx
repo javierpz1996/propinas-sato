@@ -18,6 +18,7 @@ import {
   DEFAULT_THANKS_TITLE,
 } from "@/lib/thanks-message";
 import { MAX_UPLOAD_MB, isOverUploadLimit } from "@/lib/upload-limits";
+import type { SiteFontId } from "@/lib/site-fonts";
 
 export type ThanksEditorValue = {
   thanksTitle: string;
