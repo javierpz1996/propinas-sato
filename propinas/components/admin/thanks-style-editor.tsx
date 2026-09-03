@@ -17,7 +17,7 @@ import {
   DEFAULT_THANKS_MESSAGE,
   DEFAULT_THANKS_TITLE,
 } from "@/lib/thanks-message";
-import type { SiteFontId } from "@/lib/site-fonts";
+import { MAX_UPLOAD_MB, isOverUploadLimit } from "@/lib/upload-limits";
 
 export type ThanksEditorValue = {
   thanksTitle: string;
@@ -155,6 +155,7 @@ export function ThanksStyleEditor({
           ) : (
             <p className="text-xs text-muted-foreground">
               Todavía no hay imagen. Se va a mostrar debajo del texto del monto.
+            Máximo {MAX_UPLOAD_MB} MB.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -186,7 +187,14 @@ export function ThanksStyleEditor({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) onPickImage(file);
+              if (file) {
+                if (isOverUploadLimit(file)) {
+                  setError(`La imagen supera el límite de ${MAX_UPLOAD_MB} MB.`);
+                } else {
+                  setError(null);
+                  onPickImage(file);
+                }
+              }
               e.target.value = "";
             }}
           />

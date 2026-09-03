@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 import type { UploadPayload } from "@/hooks/use-supabase-storage";
 import { RichTextField } from "@/components/admin/rich-text-field";
 import type { SiteFontId } from "@/lib/site-fonts";
+import { MAX_UPLOAD_MB, isOverUploadLimit } from "@/lib/upload-limits";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const MAX_SIZE_MB = 5;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -77,8 +77,8 @@ export function ImageDropzone({
       return;
     }
 
-    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`El archivo supera el límite de ${MAX_SIZE_MB} MB.`);
+    if (isOverUploadLimit(f)) {
+      setError(`El archivo supera el límite de ${MAX_UPLOAD_MB} MB.`);
       return;
     }
 
@@ -164,7 +164,7 @@ export function ImageDropzone({
             <div className="text-center">
               <p className="text-sm font-medium">Arrastra tu imagen aquí</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                PNG, JPEG, WebP o GIF — máximo {MAX_SIZE_MB} MB
+                PNG, JPEG, WebP o GIF — máximo {MAX_UPLOAD_MB} MB
               </p>
             </div>
             <Button variant="outline" size="sm" type="button">

@@ -3,9 +3,9 @@
 import { useCallback, useRef, useState } from "react";
 import { Loader2, Wallpaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MAX_UPLOAD_MB, isOverUploadLimit } from "@/lib/upload-limits";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const MAX_SIZE_MB = 8;
 
 interface BackgroundPickerButtonProps {
   saving: boolean;
@@ -26,8 +26,8 @@ export function BackgroundPickerButton({
         setError("Usá PNG, JPEG, WebP o GIF");
         return;
       }
-      if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-        setError(`Máximo ${MAX_SIZE_MB} MB`);
+      if (isOverUploadLimit(f)) {
+        setError(`Máximo ${MAX_UPLOAD_MB} MB`);
         return;
       }
       onPick(f);
